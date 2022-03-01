@@ -30,6 +30,10 @@ library(hrbrthemes)
 library(xfun)
 library(ggpmisc)
 
+remove.packages("rlang") 
+
+table(mypm.completed$ProgramType)
+
 
 
 myplot <- ggplot(mypm.completed, aes(x = reorder(ProgramType, WeekNo, fun=median), y=WeekNo, fill=ProgramType)) +
