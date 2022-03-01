@@ -1,0 +1,592 @@
+---
+title: "Payment Process Analysis Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+options(knitr.duplicate.label = "allow")
+
+options(scipen=3)
+options(knitr.table.format = "latex")
+#removing every ting in R
+rm(list=ls())
+
+
+library(flexdashboard)
+library (knitr)
+library (DT)
+library (rpivotTable)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(openintro)
+library(highcharter)
+
+library(odbc)
+library(DBI)
+library(dplyr)
+library(dbplyr)
+library(RODBC)
+library(lubridate)
+library(zoo)
+library(tibble)
+library(scales)
+library(tidyverse)
+library(hrbrthemes)
+library(xfun)
+library(ggpmisc)
+
+
+# Work directory Setup            #
+getwd()
+dd = c("c:/Rwork/ppmdashboard")
+setwd(dd)
+getwd()
+
+
+#Read CSV: by monitoring period
+mypm = read.csv("sql_working_CDPaymentTrack.csv")
+
+#assign # of weeks
+mypm$WeekNo <- ceiling(mypm$ProcessDay / 7)
+
+#assign week categries
+mypm$WeekCat <- "NA"
+
+#Creating # of week categories
+for (i in 1:length(mypm$WeekNo))
+{
+  if (mypm$WeekNo[i] == 1) {
+    mypm$WeekCat[i] = "A 1 Week"
+  } 
+  else if (mypm$WeekNo[i] > 1 & mypm$WeekNo[i] < 5) {
+    mypm$WeekCat[i] = "B 2-4 Week"
+  } 
+  else if (mypm$WeekNo[i] > 4 & mypm$WeekNo[i] < 9 ) {
+    mypm$WeekCat[i] = "C 5-8 Week: 2 months"
+  }
+  else if (mypm$WeekNo[i] > 8 & mypm$WeekNo[i] < 13 ) {
+    mypm$WeekCat[i] = "D 9-12 Week: 3 months"
+  }
+  else if (mypm$WeekNo[i] > 12 & mypm$WeekNo[i] < 17 ) {
+    mypm$WeekCat[i] = "E 13-16 Week: 4 months"
+  }
+  else if (mypm$WeekNo[i] > 16 & mypm$WeekNo[i] < 21 ) {
+    mypm$WeekCat[i] = "F 17-20 Week: 5 months"
+  }
+  else if (mypm$WeekNo[i] > 20 & mypm$WeekNo[i] < 25 ) {
+    mypm$WeekCat[i] = "G 21-24 Week: 6 months"
+  }
+  else if (mypm$WeekNo[i] > 24 & mypm$WeekNo[i] < 29 ) {
+    mypm$WeekCat[i] = "H 25-28 Week: 7 months"
+  }
+  
+  else 
+    mypm$WeekCat[i] = "I Over 28 Week: Over 7 months"
+    
+}
+
+mypm.completed <- mypm %>%
+  filter(mypm$Status =="Complete") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+mypm.pending <- mypm %>%
+  filter(mypm$Status =="Pending") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+# creating data by program type
+SS <- mypm.completed %>%
+  filter(ProgramType =="Social Service") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+CDC<- mypm.completed %>%
+  filter(ProgramType =="CDC") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+
+NDA<- mypm.completed %>%
+  filter(ProgramType =="NDA") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+ARA <- mypm.completed %>%
+  filter(ProgramType =="American Recovery Act") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myARA <- ARA %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+Cares<- mypm.completed %>%
+  filter(ProgramType =="CARESAct") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+Casno<- mypm.completed %>%
+  filter(ProgramType =="Casino") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+CHL<- mypm.completed %>%
+  filter(ProgramType =="CDBG Homeless Assistance") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+CW<- mypm.completed %>%
+  filter(ProgramType =="City Wide") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+ESG<- mypm.completed %>%
+  filter(ProgramType =="ESG") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+FR<- mypm.completed %>%
+  filter(ProgramType =="Furnace Repair") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+FRepl<- mypm.completed %>%
+  filter(ProgramType =="Furnace replacement") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+GClean<- mypm.completed %>%
+  filter(ProgramType =="Gutter Cleaning") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+HH<- mypm.completed %>%
+  filter(ProgramType =="HH") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+LHRD<- mypm.completed %>%
+  filter(ProgramType =="LHRD") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+MB<- mypm.completed %>%
+  filter(ProgramType =="Model Block") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+MF<- mypm.completed %>%
+  filter(ProgramType =="Multi-Family") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+Other<- mypm.completed %>%
+  filter(ProgramType =="Other") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+oDND<- mypm.completed %>%
+  filter(ProgramType =="Other_DND") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+PreDev<- mypm.completed %>%
+  filter(ProgramType =="Predevelopment") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+RAH<- mypm.completed %>%
+  filter(ProgramType =="RAH") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+SF<- mypm.completed %>%
+  filter(ProgramType =="Single Family") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+TH<- mypm.completed %>%
+  filter(ProgramType =="Townhome") %>%
+  select(ProgramType, ProcessDay, WeekNo,WeekCat)
+
+myCares <- Cares %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+
+```
+
+
+``` {r, echo=FALSE}
+
+mycolor <- c("Blue", "#FFC124", "darkgreen", "darkorange")
+
+``` 
+
+Payment Summary by Program Type
+======================================
+
+Row
+------------------------------------------------------------------------------------------------------------
+### Payment process by program type
+
+``` {r, echo=FALSE}
+
+myplot <- ggplot(mypm.completed, aes(x = reorder(ProgramType, WeekNo, fun=median), y=WeekNo, fill=ProgramType)) +
+  geom_boxplot(color='#000000', lwd=0.5) +
+  geom_point(pch=5, position=position_jitterdodge())+
+  theme_classic() +
+  xlab("Program Type") + 
+  ylab("# of Weeks")  + 
+  coord_flip() +
+  theme(legend.position="none")
+
+myplot
+
+```
+
+### Payment process by program type 
+
+``` {r, echo=FALSE}
+
+# summary table
+mydata <-  mypm.completed%>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+# plot
+
+graph <- ggplot(mydata, aes(x = WeekCat, y = count_pay)) +
+  geom_bar(stat = "identity",
+           width = 0.5) +
+  ggtitle("Payment Process - # of Completed Payment as of today") +
+  xlab("# of weeks") + ylab("# of Payment")  + 
+  coord_flip() +
+  geom_text(aes(label = count_pay),
+            hjust = 1.5,
+            color = "white",
+            size = 3) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size=10)
+    )+
+  annotate(geom = "table",
+           x = 9,
+           y = 180,
+           label = list(mydata))
+      
+graph
+
+
+```
+
+Payment Process by Program
+======================================
+### Payment process
+
+``` {r, echo=FALSE}
+myplot1 <-ggplot(mypm.completed, aes(WeekNo, colour=ProgramType)) +
+  geom_freqpoly(binwidth = 7) +
+  facet_wrap(~ProgramType)+
+  theme(legend.position="none")
+  
+
+myplot1
+
+```
+
+Division of Admin Service
+=======================================
+
+row
+---------------------------------------
+###Social Service Payment Process 
+
+``` {r, echo=FALSE}
+# summary table
+mydata <- SS %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+#mydata
+
+
+# plot
+
+graph <- ggplot(mydata, aes(x = WeekCat, y = count_pay)) +
+  geom_bar(stat = "identity",
+           width = 0.5) +
+  ggtitle("Social Service Program - # of Completed Payment as of today") +
+  xlab("# of weeks") + ylab("# of Payment")  + 
+  coord_flip() +
+  geom_text(aes(label = count_pay),
+            hjust = 1.5,
+            color = "white",
+            size = 3) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size=10)
+       ) +
+  annotate(geom = "table",
+           x = 9,
+           y = 180,
+           label = list(mydata))
+          
+graph
+
+```
+
+###CDC 
+
+```{r, echo=FALSE}
+
+# summary table
+mydata <- CDC %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+# mydata
+
+
+# plot
+
+graph <- ggplot(mydata, aes(x = WeekCat, y = count_pay)) +
+  geom_bar(stat = "identity",
+           width = 0.5) +
+  ggtitle("CDC Supporting Grant Program - # of Completed Payment as of today") +
+  xlab("# of weeks") + ylab("# of Payment")  + 
+  coord_flip() +
+  geom_text(aes(label = count_pay),
+            hjust = 1.5,
+            color = "white",
+            size = 3) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size=10)
+    )+
+  annotate(geom = "table",
+           x = 9,
+           y = 180,
+           label = list(mydata))
+      
+
+graph
+
+
+```
+
+
+###Citywide
+
+```{r, echo=FALSE}
+# summary table
+mydata <- CW %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+#mydata
+
+# plot
+
+graph <- ggplot(mydata, aes(x = WeekCat, y = count_pay)) +
+  geom_bar(stat = "identity",
+           width = 0.5) +
+  ggtitle("Citywide Supporting Grant Program - # of Completed Payment as of today") +
+  xlab("# of weeks") + ylab("# of Payment")  + 
+  coord_flip() +
+  geom_text(aes(label = count_pay),
+            hjust = 1.5,
+            color = "white",
+            size = 3) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size=10)
+       ) +
+  annotate(geom = "table",
+           x = 9,
+           y = 180,
+           label = list(mydata))
+
+graph
+
+```
+
+row
+--------------------------------------- 
+###place holder
+
+```{r, echo=FALSE}
+# summary table
+mydata <- CW %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+#mydata
+
+# plot
+
+graph <- ggplot(mydata, aes(x = WeekCat, y = count_pay)) +
+  geom_bar(stat = "identity",
+           width = 0.5) +
+  ggtitle("Citywide Supporting Grant Program - # of Completed Payment as of today") +
+  xlab("# of weeks") + ylab("# of Payment")  + 
+  coord_flip() +
+  geom_text(aes(label = count_pay),
+            hjust = 1.5,
+            color = "white",
+            size = 3) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size=10)
+       ) +
+  annotate(geom = "table",
+           x = 9,
+           y = 180,
+           label = list(mydata))
+
+graph
+
+```
+
+###place holderrow 1
+
+```{r, echo=FALSE}
+# summary table
+mydata <- CW %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+#mydata
+
+# plot
+
+graph <- ggplot(mydata, aes(x = WeekCat, y = count_pay)) +
+  geom_bar(stat = "identity",
+           width = 0.5) +
+  ggtitle("Citywide Supporting Grant Program - # of Completed Payment as of today") +
+  xlab("# of weeks") + ylab("# of Payment")  + 
+  coord_flip() +
+  geom_text(aes(label = count_pay),
+            hjust = 1.5,
+            color = "white",
+            size = 3) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size=10)
+       ) +
+  annotate(geom = "table",
+           x = 9,
+           y = 180,
+           label = list(mydata))
+
+graph
+
+```
+
+###place holderrow 1
+
+```{r, echo=FALSE}
+# summary table
+mydata <- CW %>%
+  group_by(WeekCat) %>%
+  summarize(count_pay = n())
+
+#mydata
+
+# plot
+
+graph <- ggplot(mydata, aes(x = WeekCat, y = count_pay)) +
+  geom_bar(stat = "identity",
+           width = 0.5) +
+  ggtitle("Citywide Supporting Grant Program - # of Completed Payment as of today") +
+  xlab("# of weeks") + ylab("# of Payment")  + 
+  coord_flip() +
+  geom_text(aes(label = count_pay),
+            hjust = 1.5,
+            color = "white",
+            size = 3) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size=10)
+       ) +
+  annotate(geom = "table",
+           x = 9,
+           y = 180,
+           label = list(mydata))
+
+graph
+
+```
